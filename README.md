@@ -3,6 +3,7 @@
 Requires `openslide-tools` and a python environment using `requirements.txt`
 
 1. Run `extractTiles-ws.py` with the arguments:
+
 | Variable | Description |
 | ----------- | ----------- |
 | -s| Path to WSI folder |
@@ -15,6 +16,7 @@ Requires `openslide-tools` and a python environment using `requirements.txt`
 | --ov | Size of the overlapping between 0 and 1 |
 
 2. Run `Normalize.py` with the arguments:
+
 | Variable | Description |
 | ------------- | ---------- |
 | -ip | Input path of tiles |
