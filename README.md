@@ -9,11 +9,15 @@ Requires `openslide-tools` and a python environment using `requirements.txt`
 | -s| Path to WSI folder |
 | -o | Path to output folder |
 | --skipws | Skip tessellation if annotation is missing. Default False|
-| -px | Size of image in pixels |
+| -px | Size of image in pixels (default 512) |
 | -um | Size of image in microns |
 | --num_threads | Number of threads |
 | --augment | Augment extracted tiles with flipping/rotating |
-| --ov | Size of the overlapping between 0 and 1 |
+| --ov | Size of the overlapping between 0 and 1 (default 1.0)|
+
+Example:
+
+`python /extractTiles-ws.py -s "path" -o "path" -ov 0.5`
 
 2. Run `Normalize.py` with the arguments:
 
@@ -24,6 +28,10 @@ Requires `openslide-tools` and a python environment using `requirements.txt`
 | -si | Image path for normalization template |
 | -nt | Number of threads |
 | -pl | Clini table (if needed) |
+
+Example:
+
+`python Normalize.py -ip "path" -op "path" -si normalization_template.jpg`
 
 # Resnet18
 
@@ -42,6 +50,10 @@ Then call `train.py` using the following arguments:
 | -op | Output path |
 
 Visualizations are included in the `train.py` file.
+
+Example:
+
+`python train.py -n Resnet18 -m torchvision.models.resnet18 -tr "data path" -ts "data path" -t 8 -ep 100 -bs 32 -lr 0.0001 -op "path"`
 
 # GTP
 
@@ -62,6 +74,10 @@ Run `src/tile_WSI.py` using the following arguments:
 | -o | Output path |
 | -M | Desired magnification. -1 by default |
 
+Exapmle:
+
+`python src/tile_WSI.py -s 512 -e 0 -j 32 -B 50 -M 20 -o <data/Test> "data/*.dzi"`
+
 b) Feature Extractor:
 
 Modify `config.yaml` in '/feature_extractor' to suit what you are looking for.
@@ -77,6 +93,10 @@ Run `Build_graphs.py` in '/feature_extractor' using the following arguments:
 | --weights | Path to the pretrained feature extractor |
 | --dataset | Path to patches |
 | --output | Output path |
+
+Example:
+
+`python build_graphs.py --weights "model path" --dataset "data path" --output "output path"`
 
 ### Step 2:
 
