@@ -40,7 +40,7 @@ def Normalize_Main(inputPath, outputPath, item, normalizer):
 
                 temp = os.path.join(inputPath, item)
                 tempContent = os.listdir(temp)
-                tempContent = [i for i in tempContent if i.endswith('.jpg')]
+                tempContent = [i for i in tempContent if i.endswith('.jpg') or ('.png')]
                 for tempItem in tempContent:
                     img = cv2.imread(os.path.join(inputPathRoot, tempItem))
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
