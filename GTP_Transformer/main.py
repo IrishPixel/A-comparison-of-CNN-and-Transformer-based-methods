@@ -72,7 +72,7 @@ if torch.cuda.is_available():
     model = model.cuda()
 #model.apply(weight_init)
 
-optimizer = torch.optim.Adam(model.parameters(), lr = learning_rate, weight_decay = 5e-4)       # best:5e-4, 4e-3
+optimizer = torch.optim.Adam(model.parameters(), lr = learning_rate, weight_decay = 4e-3)       # best:5e-4, 4e-3
 scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[20,100], gamma=0.1) # gamma=0.3  # 30,90,130 # 20,90,130 -> 150
 
 ##################################
@@ -99,13 +99,13 @@ for epoch in range(num_epochs):
     if train:
         for i_batch, sample_batched in enumerate(dataloader_train):
             #scheduler(optimizer, i_batch, epoch, best_pred)
-            scheduler.step(epoch)
 
             preds,labels,loss = trainer.train(sample_batched, model)
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            scheduler.step()
 
             train_loss += loss
             total += len(labels)
@@ -128,13 +128,15 @@ for epoch in range(num_epochs):
             print("evaluating...")
 
             total = 0.
+            total_loss = 0.
             batch_idx = 0
 
             for i_batch, sample_batched in enumerate(dataloader_val):
                 #pred, label, _ = evaluator.eval_test(sample_batched, model)
-                preds, labels, _ = evaluator.eval_test(sample_batched, model, graphcam)
+                preds, labels, loss = evaluator.eval_test(sample_batched, model, graphcam, n_features=args.n_features)
                 
                 total += len(labels)
+                total_loss += loss.item()
 
                 evaluator.metrics.update(labels, preds)
 
@@ -142,7 +144,9 @@ for epoch in range(num_epochs):
                     print('[%d/%d] val agg acc: %.3f' % (total, total_val_num, evaluator.get_scores()))
                     evaluator.plot_cm()
 
-            print('[%d/%d] val agg acc: %.3f' % (total_val_num, total_val_num, evaluator.get_scores()))
+            avg_val_loss = total_loss / len(dataloader_val)
+
+            print('[%d/%d] val agg acc: %.3f, val loss: %.4f' % (total_val_num, total_val_num, evaluator.get_scores(), avg_val_loss))
             evaluator.plot_cm()
 
             # torch.cuda.empty_cache()
@@ -155,16 +159,79 @@ for epoch in range(num_epochs):
                     torch.save(model.state_dict(), model_path + task_name + ".pth")
 
             log = ""
-            log = log + 'epoch [{}/{}] ------ acc: train = {:.4f}, val = {:.4f}'.format(epoch+1, num_epochs, trainer.get_scores(), evaluator.get_scores()) + "\n"
+            train_acc = trainer.get_scores()
+            val_acc = evaluator.get_scores()
+
+            train_precision, train_recall = trainer.metrics.calculate_precision_recall()
+            val_precision, val_recall = evaluator.metrics.calculate_precision_recall()
+
+            log += 'epoch [{}/{}] ------ acc: train = {:.4f}, val = {:.4f}'.format(epoch+1, num_epochs, train_acc, val_acc) + "\n"
+            log += 'epoch [{}/{}] ------ precision: train = {:.4f} (per class: {}), val = {:.4f} (per class{})'.format(
+                    epoch+1, num_epochs, 
+                    np.mean(train_precision), train_precision.tolist(),
+                    np.mean(val_precision), val_precision.tolist()
+                    ) + "\n"
+            log += 'epoch [{}/{}] ------ recall: train = {:.4f} (per class: {}), val = {:.4f} (per class{})'.format(
+                    epoch+1, num_epochs, 
+                    np.mean(train_recall), train_recall.tolist(),
+                    np.mean(val_recall), val_recall.tolist()
+                    ) + "\n"
+            log += 'epoch [{}/{}] ------ loss: train = {:.4f}, val = {:.4f}'.format(
+                    epoch+1, num_epochs,
+                    train_loss, avg_val_loss
+                    )
 
             log += "================================\n"
             print(log)
+
+            for i_batch, ample_batched in enumerate(dataloader_train if train else dataloader_val):
+                pred, labels, _ = (
+                        trainer.train(sample_batched, model, n_features=args.n_features)
+                        if train else
+                        evaluator.eval_test(sample_batched, model, n_features=args.n_features)
+                        )
+                log += f"Batch {i_batch + 1}:\n"
+                log += f"Preds: {preds.tolist()}\n"
+                log += f"Labels: {labels.tolist()}\n\n"
+
             if test: break
 
             f_log.write(log)
             f_log.flush()
 
-            writer.add_scalars('accuracy', {'train acc': trainer.get_scores(), 'val acc': evaluator.get_scores()}, epoch+1)
+            train_precision_scalar = np.mean(train_precision) if isinstance(train_precision, np.ndarray) else train_precision
+            val_precision_scalar = np.mean(val_precision) if isinstance(val_precision, np.ndarray) else val_precision
+            train_recall_scalar = np.mean(train_recall) if isinstance(train_recall, np.ndarray) else train_recall
+            val_recall_scalar = np.mean(val_recall) if isinstance(val_recall, np.ndarray) else val_recall
+
+            print(f"Train Precision: {train_precision_scalar}, Type: {type(train_precision_scalar)}")
+            print(f"Val Precision: {val_precision_scalar}, Type: {type(val_precision_scalar)}")
+            print(f"Train Recall: {train_recall_scalar}, Type: {type(train_recall_scalar)}")
+            print(f"Val Recall: {val_recall_scalar}, Type: {type(val_recall_scalar)}")
+
+            writer.add_scalars(
+                    'accuracy', 
+                    {'train acc': train_acc, 'val acc': val_acc}, 
+                    epoch+1
+                    )
+
+            writer.add_scalars(
+                    'precision',
+                    {'train precision': train_precision_scalar, 'val precision': val_precision_scalar},
+                    epoch+1
+                    )
+
+            writer.add_scalars(
+                    'recall',
+                    {'train recall': train_recall_scalar, 'val recall': val_recall_scalar},
+                    epoch+1
+                    )
+
+            writer.add_scalars(
+                    'loss',
+                    {'train loss': train_loss, 'val loss': avg_val_loss},
+                    epoch+1
+                    )
 
     trainer.reset_metrics()
     evaluator.reset_metrics()
