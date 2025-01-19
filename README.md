@@ -70,6 +70,10 @@ For evaluation call `eval.py` using the following arguments:
 | -t | Number of Threads|
 | -l | The path of the outputted log (including the name of the log file) |
 
+Example:
+
+`python Setup/eval.py -m 'model path' -t 8 -bs 8 -ts 'data path' -l directory/file.log`
+
 This method will return all results in a log file format for later visualisation at your discresion.
 
 # GTP
