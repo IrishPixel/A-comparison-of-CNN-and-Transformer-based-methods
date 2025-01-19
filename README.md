@@ -2,22 +2,22 @@
 
 Requires `openslide-tools` and a python environment using `requirements.txt`
 
-1. Run `extractTiles-ws.py` with the arguments:
+1. Run the tiling operations from the GTP method `src/tile_WSI.py`
+
+Run `src/tile_WSI.py` using the following arguments:
 
 | Variable | Description |
-| ----------- | ----------- |
-| -s| Path to WSI folder |
-| -o | Path to output folder |
-| --skipws | Skip tessellation if annotation is missing. Default False|
-| -px | Size of image in pixels (default 512) |
-| -um | Size of image in microns |
-| --num_threads | Number of threads |
-| --augment | Augment extracted tiles with flipping/rotating |
-| --ov | Size of the overlapping between 0 and 1 (default 1.0)|
+| ---------- | ------------ |
+| -s | Tile size |
+| -e | Tile overlap from 0 - 1 |
+| -j | number of threads |
+| -B | Max percentage of background aloud |
+| -o | Output path |
+| -M | Desired magnification. -1 by default |
 
-Example:
+Exapmle:
 
-`python /extractTiles-ws.py -s "path" -o "path" -ov 0.5`
+`python src/tile_WSI.py -s 512 -e 0 -j 32 -B 50 -M 20 -o <data/Test> "data/*.dzi"`
 
 2. Run `Normalize.py` with the arguments:
 
@@ -35,9 +35,12 @@ Example:
 
 # Resnet18
 
-The normalized Tiles should be stored in Data in two directories, Train and Test. For my runs I used a 60/40 train/test split.
+The normalized Tiles should be stored in Data in three directories, Train, Val and Test. For my runs I used a 40/20/40 train/validation/test split.
+
+### a) Training:
 
 Then call `train.py` using the following arguments:
+
 | Variable | Description |
 | ---------- | --------- |
 | -n | The name of the saved model |
@@ -45,15 +48,29 @@ Then call `train.py` using the following arguments:
 | -tr | Path to the training data |
 | -ts | Path to the test data |
 | -ep | Number of Epochs |
+| -t | Number of Threads |
 | -bs | Batch size |
 | -lr | Learning rate|
+| -cl | Number of Classes |
 | -op | Output path |
-
-Visualizations are included in the `train.py` file.
 
 Example:
 
-`python train.py -n Resnet18 -m torchvision.models.resnet18 -tr "data path" -ts "data path" -t 8 -ep 100 -bs 32 -lr 0.0001 -op "path"`
+`python train.py -n Resnet18 -m torchvision.models.resnet18 -tr "data path" -ts "data path" -t 8 -ep 50 -bs 8 -lr 0.00018 -cl 4 -op "path"`
+
+### b) Evaluation:
+
+For evaluation call `eval.py` using the following arguments:
+
+| Variable | Description |
+| --------- | ----------- |
+| -m | The path of the trained model |
+| -ts | The path to the test/evaluation set of data |
+| -bs | Batch size |
+| -t | Number of Threads|
+| -l | The path of the outputted log (including the name of the log file) |
+
+This method will return all results in a log file format for later visualisation at your discresion.
 
 # GTP
 
@@ -61,31 +78,14 @@ For GTP do not use tiled images as that will be part of the method. Instead skip
 
 ### Step 1:
 
-a) Tiling:
-
-Run `src/tile_WSI.py` using the following arguments:
-
-| Variable | Description |
-| ---------- | ------------ |
-| -s | Tile size |
-| -e | Tile overlap from 0 - 1 |
-| -j | number of threads |
-| -B | Max percentage of background aloud |
-| -o | Output path |
-| -M | Desired magnification. -1 by default |
-
-Exapmle:
-
-`python src/tile_WSI.py -s 512 -e 0 -j 32 -B 50 -M 20 -o <data/Test> "data/*.dzi"`
-
-b) Feature Extractor:
+a) Feature Extractor:
 
 Modify `config.yaml` in '/feature_extractor' to suit what you are looking for.
 Before training the feature extractor put the paths to all of the patches into 'all_patches.csv'.
 
 Run `run.py` 
 
-c) Counstructing Graph:
+b) Counstructing Graph:
 
 Run `Build_graphs.py` in '/feature_extractor' using the following arguments:
 | Variable | Description |
