@@ -1,6 +1,3 @@
-# Adapted from score written by wkentaro
-# https://github.com/wkentaro/pytorch-fcn/blob/master/torchfcn/utils.py
-
 import numpy as np
 
 class ConfusionMatrix(object):
@@ -39,6 +36,22 @@ class ConfusionMatrix(object):
             acc = 0.0
         
         return acc
+
+    def calculate_precision_recall(self):
+        """Calculate precision and recall for each class"""
+        hist = self.confusion_matrix
+        precision = np.zeros(self.n_classes)
+        recall = np.zeros (self.n_classes)
+
+        for i in range(self.n_classes):
+            tp = hist[i, i]
+            fp = np.sum(hist[:, i]) -tp
+            fn = np.sum(hist[i, :]) -tp
+
+            precision[i] = tp / (tp+fp) if tp + fp > 0 else 0
+            recall[i] = tp /(tp +fn) if tp + fn > 0 else 0
+
+        return precision, recall
     
     def plotcm(self):
         print(self.confusion_matrix)
